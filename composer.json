@@ -1,0 +1,53 @@
+{
+    "name": "yiisoft/yii2-app-advanced",
+    "description": "Yii 2 Advanced Application Template",
+    "keywords": ["yii2", "framework", "advanced", "application template"],
+    "homepage": "http://www.yiiframework.com/",
+    "type": "project",
+    "license": "BSD-3-Clause",
+    "support": {
+        "issues": "https://github.com/yiisoft/yii2/issues?state=open",
+        "forum": "http://www.yiiframework.com/forum/",
+        "wiki": "http://www.yiiframework.com/wiki/",
+        "irc": "irc://irc.freenode.net/yii",
+        "source": "https://github.com/yiisoft/yii2"
+    },
+    "require": {
+        "php": ">=7.1.0",
+        "yiisoft/yii2": "~2.0.14",
+        "yiisoft/yii2-bootstrap": "~2.0.0",
+        "yiisoft/yii2-swiftmailer": "~2.0.0 || ~2.1.0",
+        "baha2odeh/yii2-recaptcha-v3": "*",
+        "webonyx/graphql-php": "^0.13.4",
+        "ramsey/uuid": "^3.8",
+        "light/yii2-xmlparser": "*",
+        "spatie/array-to-xml": "^2.11",
+        "yiisoft/yii2-queue": "^2.3",
+        "yiisoft/yii2-redis": "~2.0.0",
+        "hguenot/yii2-gsftp": "*",
+        "phpoffice/phpspreadsheet": "^1.9",
+        "unisender/api-wrapper": "^1.6",
+        "box/spout": "^3.1",
+        "mk-j/php_xlsxwriter": "dev-master",
+        "kartik-v/yii2-mpdf": "dev-master",
+        "elasticsearch/elasticsearch": "~7.0"
+    },
+    "require-dev": {
+        "yiisoft/yii2-debug": "~2.1.0",
+        "yiisoft/yii2-gii": "~2.1.0",
+        "yiisoft/yii2-faker": "~2.0.0",
+        "squizlabs/php_codesniffer": "3.4.2"
+    },
+    "config": {
+        "process-timeout": 1800,
+        "fxp-asset": {
+            "enabled": false
+        }
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://asset-packagist.org"
+        }
+    ]
+}

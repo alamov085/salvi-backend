@@ -1,0 +1,43 @@
+version: '3'
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8081:80"
+      - "80:80"
+    volumes:
+      - ./docker/nginx:/etc/nginx/conf.d
+      - ./:/var/www
+      - ./docker/logs:/var/log/nginx
+  php-cli:
+    build: ./docker/php-cli
+    volumes:
+      - ./:/var/www
+    tty: true
+  php-fpm:
+    build: ./docker/php-fpm
+    volumes:
+      - ./:/var/www
+  db:
+    image: mysql:5.7.26
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: dbpass
+      MYSQL_DATABASE: salvi-prod2
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql
+    command: mysqld --sql-mode=IGNORE_SPACE,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+  redis:
+    image: redis
+    restart: always
+    volumes:
+      - ./docker/redis/data:/data
+    ports:
+      - "6379:6379"

@@ -1,0 +1,136 @@
+{
+  "drevo": [
+    {
+      "uuid": "4292874f-95e3-11ea-a243-00155dd08a09",
+      "Name": "ANTI COVID19",
+      "uuid_parent": "00000000-0000-0000-0000-000000000000",
+      "sort": "123",
+      "color": "#ffffff",
+      "statusk": "1",
+      "dop_propertis": [
+        {
+          "propert": "Вид",
+          "values": [
+            "1-вид",
+            "2-вид",
+            "3-вид"
+          ]
+        },
+        {
+          "propert": "Спосіб застосування",
+          "values": []
+        },
+        {
+          "propert": "Вага/Об'єм",
+          "values": []
+        },
+        {
+          "propert": "Серія",
+          "values": []
+        }
+      ],
+      "views": [
+        {
+          "uuid": "828943f3-2582-11ea-a23b-00155dd08a09",
+          "Name": "Бахіли",
+          "uuid_parent": "4292874f-95e3-11ea-a243-00155dd08a09",
+          "sort": "",
+          "color": "",
+          "statusk": "",
+          "dop_propertis": [
+            {
+              "propert": "Вид",
+              "values": []
+            },
+            {
+              "propert": "Спосіб застосування",
+              "values": []
+            },
+            {
+              "propert": "Вага/Об'єм",
+              "values": []
+            },
+            {
+              "propert": "Серія",
+              "values": []
+            }
+          ]
+        },
+        {
+          "uuid": "6a68654a-2581-11ea-a23b-00155dd08a09",
+          "Name": "Дезінфікуючі та антисептичні засоби",
+          "uuid_parent": "4292874f-95e3-11ea-a243-00155dd08a09",
+          "sort": "",
+          "color": "",
+          "statusk": "",
+          "dop_propertis": [
+            {
+              "propert": "Вид",
+              "values": []
+            },
+            {
+              "propert": "Спосіб застосування",
+              "values": []
+            },
+            {
+              "propert": "Вага/Об'єм",
+              "values": []
+            },
+            {
+              "propert": "Серія",
+              "values": []
+            }
+          ]
+        },
+        {
+          "uuid": "732335fe-6f40-11ea-a241-00155d00f0a6",
+          "Name": "Маски захистні",
+          "uuid_parent": "4292874f-95e3-11ea-a243-00155dd08a09",
+          "sort": "",
+          "color": "",
+          "statusk": "",
+          "dop_propertis": [
+            {
+              "propert": "Вид",
+              "values": []
+            },
+            {
+              "propert": "Тип",
+              "values": []
+            },
+            {
+              "propert": "Серія",
+              "values": []
+            },
+            {
+              "propert": "Колір",
+              "values": []
+            },
+            {
+              "propert": "Вага/Об'єм",
+              "values": []
+            }
+          ]
+        },
+        {
+          "uuid": "893a7319-95e3-11ea-a243-00155dd08a09",
+          "Name": "Одноразовий верхній одяг",
+          "uuid_parent": "4292874f-95e3-11ea-a243-00155dd08a09",
+          "sort": "",
+          "color": "",
+          "statusk": "",
+          "dop_propertis": []
+        },
+        {
+          "uuid": "76c9e9da-95e4-11ea-a243-00155dd08a09",
+          "Name": "Одноразові шапочки",
+          "uuid_parent": "4292874f-95e3-11ea-a243-00155dd08a09",
+          "sort": "",
+          "color": "",
+          "statusk": "",
+          "dop_propertis": []
+        }
+      ]
+    }
+  ]
+}

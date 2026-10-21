@@ -1,0 +1,48 @@
+# Need update GIT
+# yum -y remove git* && yum -y install  https://centos7.iuscommunity.org/ius-release.rpm && yum -y install git2u-all
+
+stages:
+    - tests
+    - deploy_prod
+    - update_prod
+    - migrate_prod
+
+test_dir_prod:
+    stage: tests
+    tags:
+        - "production"
+    only:
+        - master
+    script: echo "[$HOSTNAME] CHECK PROJECT DIR EXIST"
+    script: test -d ~/www_api
+
+git_pull_prod:
+    stage: deploy_prod
+    tags:
+        - "production"
+    only:
+        - master
+    script: echo "[$HOSTNAME] PULL PROJECT"
+    script: cd ~/www_api && git pull
+    when: on_success
+
+update_composer_prod:
+    stage: update_prod
+    tags:
+        - "production"
+    only:
+        - master
+    script: echo "[$HOSTNAME] UPDATE COMPOSER"
+    script: cd ~/www_api && composer install
+    when: on_success
+
+migrate_apply_prod:
+    stage: migrate_prod
+    tags:
+        - "production"
+    only:
+        - master
+    script: echo "[$HOSTNAME] APPLY MIGRATION"
+    script: cd ~/www_api && php yii migrate --interactive=0
+    allow_failure: false
+    when: on_success
