@@ -6,7 +6,7 @@ on:
       branch:
         description: 'Git branch to deploy'
         required: false
-        default: 'master'
+        default: 'main'
 
 jobs:
   deploy:
@@ -21,5 +21,5 @@ jobs:
           pass: ${{ secrets.PROD_SERVER_PASSWORD }}
           port: ${{ vars.PROD_SERVER_PORT }}
           command: |
-            export DEPLOY_BRANCH="${{ github.event.inputs.branch || 'master' }}"
+            export DEPLOY_BRANCH="${{ github.event.inputs.branch || 'main' }}"
             bash ${{ vars.PROD_SERVER_WORKING_DIR_API }}/deploy.sh
