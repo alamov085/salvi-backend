@@ -79,6 +79,8 @@ find . -type d \( -name '.idea' -o -name '.vscode' \) -exec rm -rf {} + 2>/dev/n
 
 # 4. Обновляем зависимости Composer
 log "4. Устанавливаем зависимости Composer..."
+export COMPOSER_PROCESS_TIMEOUT=1800
+export COMPOSER_HTTP_TIMEOUT=60
 composer install --no-dev --optimize-autoloader --no-interaction
 
 # 5. Применяем миграции БД

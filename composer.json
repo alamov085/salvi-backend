@@ -46,6 +46,10 @@
     },
     "repositories": [
         {
+            "type": "vcs",
+            "url": "https://gitflic.ru/project/unisender/php-api-wrapper.git"
+        },
+        {
             "type": "composer",
             "url": "https://asset-packagist.org"
         }

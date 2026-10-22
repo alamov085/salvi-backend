@@ -2348,14 +2348,8 @@
             "version": "v1.6.5",
             "source": {
                 "type": "git",
-                "url": "https://github.com/unisender-dev/php-api-wrapper.git",
+                "url": "https://gitflic.ru/project/unisender/php-api-wrapper.git",
                 "reference": "2c0a932cf95829b4e943a2a248038f119491a15f"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/unisender-dev/php-api-wrapper/zipball/2c0a932cf95829b4e943a2a248038f119491a15f",
-                "reference": "2c0a932cf95829b4e943a2a248038f119491a15f",
-                "shasum": ""
             },
             "require": {
                 "ext-iconv": "*",
@@ -2390,8 +2384,8 @@
                 "unisender"
             ],
             "support": {
-                "issues": "https://github.com/unisender-dev/php-api-wrapper/issues",
-                "source": "https://github.com/unisender-dev/php-api-wrapper/tree/v1.6.5"
+                "issues": "https://gitflic.ru/project/unisender/php-api-wrapper/issue",
+                "source": "https://gitflic.ru/project/unisender/php-api-wrapper"
             },
             "time": "2020-10-16T13:56:12+00:00"
         },
