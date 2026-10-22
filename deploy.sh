@@ -60,7 +60,12 @@ fi
 log "2. Создаем резервную копию проекта..."
 mkdir -p "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/salvi_api_$(date +%F_%H-%M-%S).tar.gz"
-tar -cpzf "$BACKUP_FILE" --exclude='api/runtime/*' --exclude='console/runtime/*' --exclude='node_modules' "$PROJECT_DIR" 2>/dev/null || true
+tar -cpzf "$BACKUP_FILE" \
+    --exclude='*/api/web*' \
+    --exclude='*/api/runtime*' \
+    --exclude='*/console/runtime*' \
+    --exclude='*/node_modules*' \
+    "$PROJECT_DIR" 2>/dev/null || true
 log "Бэкап сохранен: $BACKUP_FILE"
 
 # 3. Подтягиваем свежий код из Git
