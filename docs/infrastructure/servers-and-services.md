@@ -17,7 +17,7 @@
 | **WebSocket сервер** | Node.js v10.23.0 | `7070` | Socket.IO 2.2 + Express + Redis Subscriber под управлением `forever` |
 | **Почтовый транспорт** | Postfix + MiroHost SMTP | `587` (TLS) | Отправка почты (`mx1.mirohost.net:587`, SwiftMailer) |
 | **SFTP-шлюз (1С / Каталог)** | OpenSSH SFTP | `22321` | Удаленный сервер `94.130.177.104` для обмена прайс-листами 1С |
-| **CI/CD Агент** | GitHub Actions Runner | Systemd | Self-hosted runner (`actions.runner.KDTeam-2143-Team-Tool.salvi.service`) |
+| **CI/CD Деплой** | GitHub Actions (`ubuntu-latest`) | SSH `:2321` | Изолированный пользователь `deployer`, скрипт-страж `deploy-guard.sh`, bash-скрипты `deploy.sh` (self-hosted runner выведен из эксплуатации) |
 | **Мониторинг** | Zabbix Agent 2 | `10050` | Мониторинг производительности и доступности сервера |
 
 ---
@@ -96,11 +96,11 @@ flowchart TD
   systemctl restart yii-queue@1
   ```
 
-### 3. GitHub Actions Runner
+### 3. GitHub Actions Runner (Legacy)
 * **Юнит Systemd:** `/etc/systemd/system/actions.runner.KDTeam-2143-Team-Tool.salvi.service`
 * **Пользователь запуска:** `ghrunner`
 * **Каталог:** `/home/ghrunner/runsvc.sh`
-* Обеспечивает выполнение workflow деплоя прямо на целевой сервер без сторонних агентов.
+* *(Устаревший сервис)*: использовался в старой организации KDTeam. При переходе в организацию `salvillc` заменен на стандартные облачные раннеры GitHub (`ubuntu-latest`) с изолированным SSH-доступом через `deployer` и `deploy-guard.sh`.
 
 ---
 
@@ -137,24 +137,31 @@ flowchart TD
 
 ## 6. Процесс CI/CD (Production Deploy Flow)
 
-Деплой реализован через GitHub Actions Workflow (`.github/workflows/main.yml`) на стандартных облачных раннерах GitHub (`ubuntu-latest`) с вызовом серверных bash-скриптов `deploy.sh`:
+Деплой выполняется через GitHub Actions Workflow (`.github/workflows/main.yml`) на стандартных облачных раннерах GitHub (`ubuntu-latest`) с безопасным подключением к серверу по SSH (порт `2321`) под изолированным пользователем `deployer`.
+
+### 6.1. Архитектурная схема выполнения деплоя
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Dev as "Разработчик / CI Trigger"
     participant Runner as "GitHub Runner (ubuntu-latest)"
+    participant Guard as "SSH Guard (/usr/local/bin/deploy-guard.sh)"
+    participant Sudo as "Sudoers (SETENV)"
     participant Script as "Server Script (deploy.sh)"
     participant Nginx as "Nginx (Maintenance)"
-    participant Git as "Git Repository"
+    participant Git as "GitHub (salvillc/main)"
     participant DB as "MySQL (Migrations)"
 
     Dev->>Runner: Запуск workflow 'Production Deploy'
-    Runner->>Script: SSH exec: bash deploy.sh
+    Runner->>Guard: SSH exec (:2321, user: deployer)
+    Note over Guard: Валидация команды (stdin/argv)<br/>Разрешен ТОЛЬКО deploy.sh<br/>Извлечение DEPLOY_BRANCH
+    Guard->>Sudo: exec sudo -E /bin/bash deploy.sh
+    Sudo->>Script: Старт скрипта от root (права подтверждены)
     Script->>Nginx: Включение страницы заглушки (mv ssl_salvi.ua.conf -> site_update.conf)
-    Script->>Script: Резервное копирование tar -cpzf auto-deployment-backup/
-    Script->>Git: git fetch --all && git reset --hard origin/master && git pull
-    Script->>Script: composer install --no-dev --optimize-autoloader
+    Script->>Script: Быстрый бэкап tar (исключая api/web, runtime, node_modules)
+    Script->>Git: git fetch --all && git reset --hard origin/main && git pull
+    Script->>Script: composer install (COMPOSER_HTTP_TIMEOUT=60, GitFlic зеркало)
     Script->>DB: php yii migrate --interactive=0
     Script->>Script: php yii cache/flush-all && systemctl reload php-fpm
     Script->>Nginx: Отключение заглушки (возврат ssl_salvi.ua.conf)
@@ -163,11 +170,40 @@ sequenceDiagram
     Runner-->>Dev: Уведомление об успешном деплое
 ```
 
-### Скрипты деплоя в репозиториях:
+### 6.2. Ключевые компоненты безопасности и оптимизации:
+
+1. **Изолированный пользователь `deployer`:**
+   * Не имеет прав интерактивного входа в систему (оболочкой назначен `/usr/local/bin/deploy-guard.sh`).
+   * Даже при компрометации пароля или ключа злоумышленник не может получить командную строку bash или прочитать файлы сервера.
+
+2. **Скрипт-страж (`/usr/local/bin/deploy-guard.sh`):**
+   * Перехватывает поток команд из любого источника (аргументы `-c`, переменная `$SSH_ORIGINAL_COMMAND` и стандартный поток ввода `stdin`, используемый экшеном `fifsky/ssh-action`).
+   * Проверяет команду по строгому белому списку: допускается только запуск `/var/www/salvi/www/deploy.sh` (фронтенд) или `/var/www/salvi/www_api/deploy.sh` (бэкенд). Все остальные запросы прерываются с кодом 1.
+   * Парсит переменную ветки `DEPLOY_BRANCH` и передает её в скрипт через `sudo -E`.
+
+3. **Ограниченная конфигурация `sudoers` (`/etc/sudoers.d/deployer`):**
+   * Разрешает пользователю `deployer` запуск без пароля исключительно двух скриптов деплоя:
+     ```text
+     deployer ALL=(root) SETENV: NOPASSWD: /bin/bash /var/www/salvi/www/deploy.sh, /bin/bash /var/www/salvi/www_api/deploy.sh
+     ```
+   * Тег `SETENV:` разрешает безопасный проброс переменной ветки `DEPLOY_BRANCH` без выдачи широких прав.
+
+4. **Оптимизация резервного копирования (Backup Exclusions):**
+   * Папка `/var/www/salvi/www_api/api/web` (содержащая каталог товаров, загруженные изображения, временные PDF и тяжелые отчеты) **исключена из архива бэкапа** флагом `--exclude='*/api/web*'`.
+   * Также исключены `api/runtime`, `console/runtime` и `node_modules`, что снизило время создания бэкапа с нескольких минут до 1–2 секунд и устранило разрастание архивов на диске.
+
+5. **Особенности Composer в закрытом контуре:**
+   * **`unisender/api-wrapper` (v1.6.5):** в `composer.json` и `composer.lock` источник библиотеки переключен на официальный репозиторий GitFlic (`https://gitflic.ru/project/unisender/php-api-wrapper.git`), так как старый репозиторий на GitHub был удален вендором.
+   * **Сетевой таймаут:** в скрипте деплоя задан `COMPOSER_HTTP_TIMEOUT=60`, предотвращающий сбои по 10-секундному таймауту при обращении к GitHub API.
+
+---
+
+### 6.3. Скрипты деплоя в репозиториях:
 * **Бэкенд:** [`deploy.sh`](file:///C:/Users/Admin/PhpstormProjects/salvi_back/deploy.sh) в корне `salvi_back` (путь на сервере: `/var/www/salvi/www_api/deploy.sh`).
 * **Фронтенд:** [`salvi_front/deploy.sh`](file:///C:/Users/Admin/PhpstormProjects/salvi_front/deploy.sh) в корне `salvi_front` (путь на сервере: `/var/www/salvi/www/deploy.sh`).
 
-Оба скрипта оснащены обработчиком `trap cleanup EXIT`: при возникновении любой ошибки заглушка Nginx гарантированно отключается, возвращается рабочее состояние и восстанавливаются корректные права владельца `salvi:salvi`. Скрипты можно запускать как через GitHub Actions, так и вручную в консоли сервера:
+Оба скрипта оснащены обработчиком `trap cleanup EXIT`: при возникновении любой ошибки заглушка Nginx гарантированно отключается, сайт возвращается в рабочий режим и восстанавливаются права владельца `salvi:salvi`.
+
 ```bash
 # Ручной запуск деплоя бэкенда на сервере:
 bash /var/www/salvi/www_api/deploy.sh

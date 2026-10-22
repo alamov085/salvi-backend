@@ -8,23 +8,15 @@ $params = array_merge(
     require __DIR__ . '/params-local.php'
 );
 
-return [
+$config = [
     'id' => 'app-api',
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'api\controllers',
     'bootstrap' => [
         'log',
-        'debug',
     ],
     'language' => 'uk-UA',
     'modules' => [
-        'debug' => [
-            'class' => 'yii\debug\Module',
-            'allowedIPs' => ['127.0.0.1', '185.43.224.114', '95.217.42.171', '144.76.41.253', '95.216.224.157'],
-            'panels' => [
-                'queue' => \yii\queue\debug\Panel::class,
-            ],
-        ],
     ],
     'components' => [
         'elasticsearch' => [
@@ -89,3 +81,17 @@ return [
     ],
     'params' => $params,
 ];
+
+// Подключаем модуль отладки только если он физически установлен
+if (class_exists('yii\debug\Module')) {
+    $config['bootstrap'][] = 'debug';
+    $config['modules']['debug'] = [
+        'class' => 'yii\debug\Module',
+        'allowedIPs' => ['127.0.0.1', '185.43.224.114', '95.217.42.171', '144.76.41.253', '95.216.224.157'],
+        'panels' => [
+            'queue' => \yii\queue\debug\Panel::class,
+        ],
+    ];
+}
+
+return $config;

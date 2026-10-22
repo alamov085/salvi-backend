@@ -27,13 +27,13 @@
         "hguenot/yii2-gsftp": "*",
         "phpoffice/phpspreadsheet": "^1.9",
         "unisender/api-wrapper": "^1.6",
+        "yiisoft/yii2-debug": "~2.1.0",
         "box/spout": "^3.1",
         "mk-j/php_xlsxwriter": "dev-master",
         "kartik-v/yii2-mpdf": "dev-master",
         "elasticsearch/elasticsearch": "~7.0"
     },
     "require-dev": {
-        "yiisoft/yii2-debug": "~2.1.0",
         "yiisoft/yii2-gii": "~2.1.0",
         "yiisoft/yii2-faker": "~2.0.0",
         "squizlabs/php_codesniffer": "3.4.2"

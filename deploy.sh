@@ -60,13 +60,21 @@ fi
 log "2. Создаем резервную копию проекта..."
 mkdir -p "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/salvi_api_$(date +%F_%H-%M-%S).tar.gz"
-tar -cpzf "$BACKUP_FILE" \
+
+# Используем многопоточный pigz (2 ядра), если установлен, иначе обычный gzip
+COMPRESS_PROG="gzip"
+if command -v pigz >/dev/null 2>&1; then
+    COMPRESS_PROG="pigz -p 2"
+fi
+
+tar --use-compress-program="$COMPRESS_PROG" -cpf "$BACKUP_FILE" \
     --exclude='*/api/web*' \
     --exclude='*/api/runtime*' \
     --exclude='*/console/runtime*' \
     --exclude='*/node_modules*' \
+    --exclude='*/vendor*' \
     "$PROJECT_DIR" 2>/dev/null || true
-log "Бэкап сохранен: $BACKUP_FILE"
+log "Бэкап сохранен ($COMPRESS_PROG): $BACKUP_FILE"
 
 # 3. Подтягиваем свежий код из Git
 log "3. Обновляем кодовую базу Git (ветка: $BRANCH)..."
@@ -81,7 +89,7 @@ find . -type d \( -name '.idea' -o -name '.vscode' \) -exec rm -rf {} + 2>/dev/n
 log "4. Устанавливаем зависимости Composer..."
 export COMPOSER_PROCESS_TIMEOUT=1800
 export COMPOSER_HTTP_TIMEOUT=60
-composer install --no-dev --optimize-autoloader --no-interaction
+composer install --optimize-autoloader --no-interaction
 
 # 5. Применяем миграции БД
 log "5. Применяем миграции базы данных Yii2..."
