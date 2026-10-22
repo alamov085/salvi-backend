@@ -12,21 +12,21 @@ on:
           - warning
           - debug
 jobs:
-  start_notification:
-    name: Google Chat Notification Start
-    runs-on: salvi
-    steps:
-      - name: Google Chat Notification Start
-        if: always()
-        uses: Co-qn/google-chat-notification@releases/v1
-        with:
-          name: 'Starting deployment (Production Deploy)!'
-          url:  ${{ secrets.GOOGLE_CHAT_CHANNEL_TOKEN }}
-          status:  ${{ job.status }}
+#  start_notification:
+#    name: Google Chat Notification Start
+#    runs-on: salvi
+#    steps:
+#      - name: Google Chat Notification Start
+#        if: always()
+#        uses: Co-qn/google-chat-notification@releases/v1
+#        with:
+#          name: 'Starting deployment (Production Deploy)!'
+#          url:  ${{ secrets.GOOGLE_CHAT_CHANNEL_TOKEN }}
+#          status:  ${{ job.status }}
   deploy_dummy_on:
     name: Deploy Dummy On
     runs-on: salvi
-    needs: [ start_notification ]
+#    needs: [ start_notification ]
     steps:
       - name: Dummy On
         uses: fifsky/ssh-action@master
@@ -123,15 +123,15 @@ jobs:
           user: ${{ secrets.PROD_SERVER_USERNAME }}
           pass: ${{ secrets.PROD_SERVER_PASSWORD }}
           port: ${{ vars.PROD_SERVER_PORT }}
-  finish_notification:
-    name: Google Chat Finish Notification
-    runs-on: salvi
-    needs: [ deploy_dummy_off ]
-    steps:
-      - name: Google Chat Notification Start
-        if: always()
-        uses: Co-qn/google-chat-notification@releases/v1
-        with:                                                    
-          name: 'Completion deployment (Production Deploy)!'
-          url:  ${{ secrets.GOOGLE_CHAT_CHANNEL_TOKEN }}
-          status:  ${{ job.status }}
+#  finish_notification:
+#    name: Google Chat Finish Notification
+#    runs-on: salvi
+#    needs: [ deploy_dummy_off ]
+#    steps:
+#      - name: Google Chat Notification Start
+#        if: always()
+#        uses: Co-qn/google-chat-notification@releases/v1
+#        with:
+#          name: 'Completion deployment (Production Deploy)!'
+#          url:  ${{ secrets.GOOGLE_CHAT_CHANNEL_TOKEN }}
+#          status:  ${{ job.status }}
