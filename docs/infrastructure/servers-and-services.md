@@ -137,23 +137,41 @@ flowchart TD
 
 ## 6. Процесс CI/CD (Production Deploy Flow)
 
-Деплой реализован через GitHub Actions Workflow (`.github/workflows/main.yml`) на основе self-hosted runner:
+Деплой реализован через GitHub Actions Workflow (`.github/workflows/main.yml`) на стандартных облачных раннерах GitHub (`ubuntu-latest`) с вызовом серверных bash-скриптов `deploy.sh`:
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Dev as "Разработчик / CI Trigger"
-    participant Runner as "GitHub Runner (salvi)"
+    participant Runner as "GitHub Runner (ubuntu-latest)"
+    participant Script as "Server Script (deploy.sh)"
     participant Nginx as "Nginx (Maintenance)"
-    participant Git as "Репозиторий www_api"
+    participant Git as "Git Repository"
     participant DB as "MySQL (Migrations)"
 
     Dev->>Runner: Запуск workflow 'Production Deploy'
-    Runner->>Nginx: Включение страницы заглушки (mv ssl_salvi.ua -> site_update.conf)
-    Runner->>Git: Резервное копирование tar -cpzf auto-deployment-backup/
-    Runner->>Git: git fetch --all && git reset --hard origin/master && git pull
-    Runner->>Runner: composer update / composer install
-    Runner->>DB: php yii migrate --interactive=0
-    Runner->>Nginx: Отключение заглушки (возврат ssl_salvi.ua.conf)
-    Runner-->>Dev: Google Chat Notification (Успешное завершение)
+    Runner->>Script: SSH exec: bash deploy.sh
+    Script->>Nginx: Включение страницы заглушки (mv ssl_salvi.ua.conf -> site_update.conf)
+    Script->>Script: Резервное копирование tar -cpzf auto-deployment-backup/
+    Script->>Git: git fetch --all && git reset --hard origin/master && git pull
+    Script->>Script: composer install --no-dev --optimize-autoloader
+    Script->>DB: php yii migrate --interactive=0
+    Script->>Script: php yii cache/flush-all && systemctl reload php-fpm
+    Script->>Nginx: Отключение заглушки (возврат ssl_salvi.ua.conf)
+    Script->>Script: Восстановление прав chown -R salvi:salvi
+    Script-->>Runner: Код завершения 0 (Success)
+    Runner-->>Dev: Уведомление об успешном деплое
+```
+
+### Скрипты деплоя в репозиториях:
+* **Бэкенд:** [`deploy.sh`](file:///C:/Users/Admin/PhpstormProjects/salvi_back/deploy.sh) в корне `salvi_back` (путь на сервере: `/var/www/salvi/www_api/deploy.sh`).
+* **Фронтенд:** [`salvi_front/deploy.sh`](file:///C:/Users/Admin/PhpstormProjects/salvi_front/deploy.sh) в корне `salvi_front` (путь на сервере: `/var/www/salvi/www/deploy.sh`).
+
+Оба скрипта оснащены обработчиком `trap cleanup EXIT`: при возникновении любой ошибки заглушка Nginx гарантированно отключается, возвращается рабочее состояние и восстанавливаются корректные права владельца `salvi:salvi`. Скрипты можно запускать как через GitHub Actions, так и вручную в консоли сервера:
+```bash
+# Ручной запуск деплоя бэкенда на сервере:
+bash /var/www/salvi/www_api/deploy.sh
+
+# Ручной запуск деплоя фронтенда на сервере:
+bash /var/www/salvi/www/deploy.sh
 ```

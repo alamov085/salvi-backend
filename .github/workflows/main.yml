@@ -1,137 +1,25 @@
 name: Production Deploy
+
 on:
   workflow_dispatch:
     inputs:
-      logLevel:
-        description: 'Log level'
+      branch:
+        description: 'Git branch to deploy'
         required: false
-        default: 'warning'
-        type: choice
-        options:
-          - info
-          - warning
-          - debug
+        default: 'master'
+
 jobs:
-#  start_notification:
-#    name: Google Chat Notification Start
-#    runs-on: salvi
-#    steps:
-#      - name: Google Chat Notification Start
-#        if: always()
-#        uses: Co-qn/google-chat-notification@releases/v1
-#        with:
-#          name: 'Starting deployment (Production Deploy)!'
-#          url:  ${{ secrets.GOOGLE_CHAT_CHANNEL_TOKEN }}
-#          status:  ${{ job.status }}
-  deploy_dummy_on:
-    name: Deploy Dummy On
-    runs-on: salvi
-#    needs: [ start_notification ]
+  deploy:
+    name: Deploy API via Script
+    runs-on: ubuntu-latest
     steps:
-      - name: Dummy On
+      - name: Execute deployment script on server
         uses: fifsky/ssh-action@master
         with:
-          command: |
-            cd /etc/nginx/conf.d
-            mv ssl_salvi.ua.conf ssl_salvi.ua
-            mv site_update site_update.conf
-            systemctl restart nginx
-            cd ${{ vars.PROD_SERVER_WORKING_DIR_API }}
-            touch deploy
           host: ${{ vars.PROD_SERVER_IP }}
           user: ${{ secrets.PROD_SERVER_USERNAME }}
           pass: ${{ secrets.PROD_SERVER_PASSWORD }}
           port: ${{ vars.PROD_SERVER_PORT }}
-  make_backup:
-    name: Make backup
-    runs-on: salvi
-    needs: [ deploy_dummy_on ]
-    steps:
-      - name: Backup
-        uses: fifsky/ssh-action@master
-        with:
           command: |
-            tar -cpzf /var/www/salvi/auto-deployment-backup/salvi.ua.tar.gz /var/www/salvi/www
-          host: ${{ vars.PROD_SERVER_IP }}
-          user: ${{ secrets.PROD_SERVER_USERNAME }}
-          pass: ${{ secrets.PROD_SERVER_PASSWORD }}
-          port: ${{ vars.PROD_SERVER_PORT }}
-  git_pull:
-    name: Git Pull & Prepare Files
-    runs-on: salvi
-    needs: [ make_backup ]
-    steps:
-      - name: Git Pull
-        uses: fifsky/ssh-action@master
-        with:
-          command: |
-            cd ${{ vars.PROD_SERVER_WORKING_DIR_API }}
-            git fetch --all
-            git reset --hard origin/master
-            git pull
-            find . -type d \( -name '.idea' -o -name '.vscode' \) -print0 | xargs -0 rm -rf
-          host: ${{ vars.PROD_SERVER_IP }}
-          user: ${{ secrets.PROD_SERVER_USERNAME }}
-          pass: ${{ secrets.PROD_SERVER_PASSWORD }}
-          port: ${{ vars.PROD_SERVER_PORT }}
-  api_update:
-    name: API Update
-    runs-on: salvi
-    needs: [ git_pull ]
-    steps:
-      - name: api update
-        uses: fifsky/ssh-action@master
-        with:
-          command: |
-            cd ${{ vars.PROD_SERVER_WORKING_DIR_API }}
-            composer update
-          host: ${{ vars.PROD_SERVER_IP }}
-          user: ${{ secrets.PROD_SERVER_USERNAME }}
-          pass: ${{ secrets.PROD_SERVER_PASSWORD }}
-          port: ${{ vars.PROD_SERVER_PORT }}
-  migrate_db:
-    name: Migrate DB
-    runs-on: salvi
-    needs: [ api_update ]
-    steps:
-      - name: migrate db
-        uses: fifsky/ssh-action@master
-        with:
-          command: |
-            cd ${{ vars.PROD_SERVER_WORKING_DIR_API }}
-            php yii migrate --interactive=0
-          host: ${{ vars.PROD_SERVER_IP }}
-          user: ${{ secrets.PROD_SERVER_USERNAME }}
-          pass: ${{ secrets.PROD_SERVER_PASSWORD }}
-          port: ${{ vars.PROD_SERVER_PORT }}
-  deploy_dummy_off:
-    name: Deploy Dummy Off
-    runs-on: salvi
-    needs: [ migrate_db ]
-    steps:
-      - name: dummy off
-        uses: fifsky/ssh-action@master
-        with:
-          command: |
-            cd /etc/nginx/conf.d
-            mv ssl_salvi.ua ssl_salvi.ua.conf
-            mv site_update.conf site_update
-            systemctl restart nginx
-            cd ${{ vars.PROD_SERVER_WORKING_DIR_API }}
-            rm -f deploy
-          host: ${{ vars.PROD_SERVER_IP }}
-          user: ${{ secrets.PROD_SERVER_USERNAME }}
-          pass: ${{ secrets.PROD_SERVER_PASSWORD }}
-          port: ${{ vars.PROD_SERVER_PORT }}
-#  finish_notification:
-#    name: Google Chat Finish Notification
-#    runs-on: salvi
-#    needs: [ deploy_dummy_off ]
-#    steps:
-#      - name: Google Chat Notification Start
-#        if: always()
-#        uses: Co-qn/google-chat-notification@releases/v1
-#        with:
-#          name: 'Completion deployment (Production Deploy)!'
-#          url:  ${{ secrets.GOOGLE_CHAT_CHANNEL_TOKEN }}
-#          status:  ${{ job.status }}
+            export DEPLOY_BRANCH="${{ github.event.inputs.branch || 'master' }}"
+            bash ${{ vars.PROD_SERVER_WORKING_DIR_API }}/deploy.sh
