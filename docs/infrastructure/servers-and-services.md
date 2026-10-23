@@ -149,22 +149,20 @@ sequenceDiagram
     participant Guard as "SSH Guard (/usr/local/bin/deploy-guard.sh)"
     participant Sudo as "Sudoers (SETENV)"
     participant Script as "Server Script (deploy.sh)"
-    participant Nginx as "Nginx (Maintenance)"
     participant Git as "GitHub (salvillc/main)"
     participant DB as "MySQL (Migrations)"
+    participant PHP as "PHP-FPM (Graceful Reload)"
 
     Dev->>Runner: Запуск workflow 'Production Deploy'
     Runner->>Guard: SSH exec (:2321, user: deployer)
     Note over Guard: Валидация команды (stdin/argv)<br/>Разрешен ТОЛЬКО deploy.sh<br/>Извлечение DEPLOY_BRANCH
     Guard->>Sudo: exec sudo -E /bin/bash deploy.sh
     Sudo->>Script: Старт скрипта от root (права подтверждены)
-    Script->>Nginx: Включение страницы заглушки (mv ssl_salvi.ua.conf -> site_update.conf)
-    Script->>Script: Быстрый бэкап tar (исключая api/web, runtime, node_modules)
+    Script->>Script: Быстрый бэкап tar (pigz, исключая api/web, runtime, node_modules)
     Script->>Git: git fetch --all && git reset --hard origin/main && git pull
     Script->>Script: composer install (COMPOSER_HTTP_TIMEOUT=60, GitFlic зеркало)
     Script->>DB: php yii migrate --interactive=0
-    Script->>Script: php yii cache/flush-all && systemctl reload php-fpm
-    Script->>Nginx: Отключение заглушки (возврат ssl_salvi.ua.conf)
+    Script->>PHP: php yii cache/flush-all && systemctl reload php-fpm
     Script->>Script: Восстановление прав chown -R salvi:salvi
     Script-->>Runner: Код завершения 0 (Success)
     Runner-->>Dev: Уведомление об успешном деплое
@@ -202,7 +200,7 @@ sequenceDiagram
 * **Бэкенд:** [`deploy.sh`](file:///C:/Users/Admin/PhpstormProjects/salvi_back/deploy.sh) в корне `salvi_back` (путь на сервере: `/var/www/salvi/www_api/deploy.sh`).
 * **Фронтенд:** [`salvi_front/deploy.sh`](file:///C:/Users/Admin/PhpstormProjects/salvi_front/deploy.sh) в корне `salvi_front` (путь на сервере: `/var/www/salvi/www/deploy.sh`).
 
-Оба скрипта оснащены обработчиком `trap cleanup EXIT`: при возникновении любой ошибки заглушка Nginx гарантированно отключается, сайт возвращается в рабочий режим и восстанавливаются права владельца `salvi:salvi`.
+Оба скрипта оснащены обработчиком `trap cleanup EXIT`: деплой выполняется бесшовно (zero-downtime) без показа страницы заглушки, а при возникновении любой ошибки гарантированно восстанавливаются права владельца `salvi:salvi`.
 
 ```bash
 # Ручной запуск деплоя бэкенда на сервере:

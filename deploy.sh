@@ -15,22 +15,21 @@ log() {
 
 log "=== Начинаем деплой SALVI API (Бэкенд) ==="
 
-# Функция аварийного выхода и очистки: гарантирует снятие заглушки и возврат прав
+# Функция аварийного выхода и очистки: гарантирует возврат прав и сброс состояния
 cleanup() {
     local exit_code=$?
     if [ $exit_code -ne 0 ]; then
-        log "ОШИБКА: Деплой завершился со сбоем (код $exit_code). Выполняем аварийный откат..."
+        log "ОШИБКА: Деплой завершился со сбоем (код $exit_code)."
     fi
 
-    # Снимаем заглушку Nginx, если она осталась включенной
+    # Аварийная страховка: если на сервере вдруг осталась старая заглушка Nginx
     if [ -f "$NGINX_DIR/site_update.conf" ]; then
-        log "Снимаем страницу заглушки Nginx..."
+        log "Обнаружена активная заглушка Nginx, снимаем..."
         mv "$NGINX_DIR/ssl_salvi.ua" "$NGINX_DIR/ssl_salvi.ua.conf" 2>/dev/null || true
         mv "$NGINX_DIR/site_update.conf" "$NGINX_DIR/site_update" 2>/dev/null || true
         systemctl restart nginx 2>/dev/null || true
     fi
-
-    rm -f "$PROJECT_DIR/deploy"
+    rm -f "$PROJECT_DIR/deploy" 2>/dev/null || true
 
     # Гарантированно восстанавливаем права salvi:salvi
     log "Восстанавливаем права доступа salvi:salvi..."
@@ -40,24 +39,15 @@ cleanup() {
     if [ $exit_code -eq 0 ]; then
         log "=== Деплой SALVI API успешно завершен! ==="
     else
-        log "=== Деплой завершился с ошибкой! Сайт возвращен в рабочий режим. ==="
+        log "=== Деплой завершился с ошибкой! ==="
     fi
 }
 trap cleanup EXIT
 
 cd "$PROJECT_DIR"
 
-# 1. Включаем заглушку
-log "1. Включаем страницу обновления (Maintenance Mode)..."
-touch "$PROJECT_DIR/deploy"
-if [ -f "$NGINX_DIR/ssl_salvi.ua.conf" ]; then
-    mv "$NGINX_DIR/ssl_salvi.ua.conf" "$NGINX_DIR/ssl_salvi.ua"
-    mv "$NGINX_DIR/site_update" "$NGINX_DIR/site_update.conf"
-    systemctl restart nginx
-fi
-
-# 2. Создаем резервную копию
-log "2. Создаем резервную копию проекта..."
+# 1. Создаем резервную копию
+log "1. Создаем резервную копию проекта..."
 mkdir -p "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/salvi_api_$(date +%F_%H-%M-%S).tar.gz"
 
@@ -73,6 +63,7 @@ if command -v pigz >/dev/null 2>&1; then
         --exclude='*/nodejs*' \
         --exclude='*/.git*' \
         --exclude='*/console/xml/orders*' \
+        --exclude='*/console/xml/1c_b2b.xml' \
         "$PROJECT_DIR" 2>/dev/null | pigz -p 2 > "$BACKUP_FILE"
 else
     COMPRESSOR="gzip"
@@ -85,14 +76,21 @@ else
         --exclude='*/nodejs*' \
         --exclude='*/.git*' \
         --exclude='*/console/xml/orders*' \
+        --exclude='*/console/xml/1c_b2b.xml' \
         "$PROJECT_DIR" 2>/dev/null | gzip > "$BACKUP_FILE"
 fi
 
 BACKUP_SIZE=$(du -h "$BACKUP_FILE" 2>/dev/null | cut -f1)
 log "Бэкап сохранен ($COMPRESSOR, размер: ${BACKUP_SIZE:-0}): $BACKUP_FILE"
 
-# 3. Подтягиваем свежий код из Git
-log "3. Обновляем кодовую базу Git (ветка: $BRANCH)..."
+# Удаляем старые бэкапы бэкенда, оставляя только свежесозданный
+if [ -s "$BACKUP_FILE" ]; then
+    log "Удаляем старые бэкапы salvi_api, оставляя только текущий..."
+    find "$BACKUP_DIR" -maxdepth 1 -type f -name "salvi_api_*.tar.gz" ! -name "$(basename "$BACKUP_FILE")" -exec rm -f {} + 2>/dev/null || true
+fi
+
+# 2. Подтягиваем свежий код из Git
+log "2. Обновляем кодовую базу Git (ветка: $BRANCH)..."
 git fetch --all
 git reset --hard "origin/$BRANCH"
 git pull origin "$BRANCH"
@@ -100,26 +98,17 @@ git pull origin "$BRANCH"
 # Очистка мусорных файлов IDE
 find . -type d \( -name '.idea' -o -name '.vscode' \) -exec rm -rf {} + 2>/dev/null || true
 
-# 4. Обновляем зависимости Composer
-log "4. Устанавливаем зависимости Composer..."
+# 3. Обновляем зависимости Composer
+log "3. Устанавливаем зависимости Composer..."
 export COMPOSER_PROCESS_TIMEOUT=1800
 export COMPOSER_HTTP_TIMEOUT=60
 composer install --optimize-autoloader --no-interaction
 
-# 5. Применяем миграции БД
-log "5. Применяем миграции базы данных Yii2..."
+# 4. Применяем миграции БД
+log "4. Применяем миграции базы данных Yii2..."
 php yii migrate --interactive=0
 
-# 6. Сбрасываем кэш и перезапускаем воркеры
-log "6. Сбрасываем кэш и перезапускаем PHP-FPM..."
+# 5. Сбрасываем кэш и перезапускаем воркеры
+log "5. Сбрасываем кэш и перезапускаем PHP-FPM..."
 php yii cache/flush-all 2>/dev/null || true
 systemctl reload php-fpm
-
-# 7. Отключаем заглушку Nginx
-log "7. Отключаем заглушку и возвращаем рабочий конфиг Nginx..."
-if [ -f "$NGINX_DIR/site_update.conf" ]; then
-    mv "$NGINX_DIR/ssl_salvi.ua" "$NGINX_DIR/ssl_salvi.ua.conf"
-    mv "$NGINX_DIR/site_update.conf" "$NGINX_DIR/site_update"
-    systemctl restart nginx
-fi
-rm -f "$PROJECT_DIR/deploy"
