@@ -28,6 +28,11 @@ return [
                     'class' => 'yii\log\FileTarget',
                     'levels' => ['error', 'warning'],
                 ],
+                [
+                    'class' => 'common\components\TelegramTarget',
+                    'levels' => ['error'],
+                    'logVars' => [],
+                ],
             ],
         ],
     ],

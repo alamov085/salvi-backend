@@ -54,6 +54,12 @@ $config = [
                     'levels' => ['error'],
                     'logVars' => [],
                 ],
+                // Таргет для отправки критических ошибок и ошибок БД в Telegram
+                [
+                    'class' => 'common\components\TelegramTarget',
+                    'levels' => ['error'],
+                    'logVars' => [], // Не прикреплять $_COOKIE/$_SERVER для чистоты сообщений
+                ],
             ],
         ],
         'errorHandler' => [
