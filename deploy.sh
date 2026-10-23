@@ -62,19 +62,34 @@ mkdir -p "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/salvi_api_$(date +%F_%H-%M-%S).tar.gz"
 
 # Используем многопоточный pigz (2 ядра), если установлен, иначе обычный gzip
-COMPRESS_PROG="gzip"
 if command -v pigz >/dev/null 2>&1; then
-    COMPRESS_PROG="pigz -p 2"
+    COMPRESSOR="pigz -p 2"
+    tar -cpf - \
+        --exclude='*/api/web*' \
+        --exclude='*/api/runtime*' \
+        --exclude='*/console/runtime*' \
+        --exclude='*/node_modules*' \
+        --exclude='*/vendor*' \
+        --exclude='*/nodejs*' \
+        --exclude='*/.git*' \
+        --exclude='*/console/xml/orders*' \
+        "$PROJECT_DIR" 2>/dev/null | pigz -p 2 > "$BACKUP_FILE"
+else
+    COMPRESSOR="gzip"
+    tar -cpf - \
+        --exclude='*/api/web*' \
+        --exclude='*/api/runtime*' \
+        --exclude='*/console/runtime*' \
+        --exclude='*/node_modules*' \
+        --exclude='*/vendor*' \
+        --exclude='*/nodejs*' \
+        --exclude='*/.git*' \
+        --exclude='*/console/xml/orders*' \
+        "$PROJECT_DIR" 2>/dev/null | gzip > "$BACKUP_FILE"
 fi
 
-tar --use-compress-program="$COMPRESS_PROG" -cpf "$BACKUP_FILE" \
-    --exclude='*/api/web*' \
-    --exclude='*/api/runtime*' \
-    --exclude='*/console/runtime*' \
-    --exclude='*/node_modules*' \
-    --exclude='*/vendor*' \
-    "$PROJECT_DIR" 2>/dev/null || true
-log "Бэкап сохранен ($COMPRESS_PROG): $BACKUP_FILE"
+BACKUP_SIZE=$(du -h "$BACKUP_FILE" 2>/dev/null | cut -f1)
+log "Бэкап сохранен ($COMPRESSOR, размер: ${BACKUP_SIZE:-0}): $BACKUP_FILE"
 
 # 3. Подтягиваем свежий код из Git
 log "3. Обновляем кодовую базу Git (ветка: $BRANCH)..."
