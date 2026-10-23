@@ -17,7 +17,7 @@ salvi_back/
 │   ├── services/    # Сервисы фильтрации, генерации Excel/PDF
 │   └── web/         # Web-root (index.php)
 ├── common/          # Общее ядро логики для API и Console
-│   ├── components/  # RbacManager, User identity, EmptyLogger
+│   ├── components/  # RbacManager, User identity, EmptyLogger, TelegramTarget
 │   ├── config/      # Базовые конфиги (main.php, params.php, bootstrap.php)
 │   ├── events/      # Слушатели системных событий (AppEvent)
 │   ├── helpers/     # Утилиты парсинга XML, изображений, карт
@@ -68,6 +68,7 @@ flowchart TD
         Redis[("Redis 6.0: Кэш / Очереди / PubSub")]
         SFTP["Удаленный SFTP 1C (94.130.177.104)"]
         SMTP["MiroHost SMTP (mx1.mirohost.net)"]
+        TG["Telegram Bot API (api.telegram.org)"]
     end
 
     Client -->|"HTTPS REST"| NginxAPI --> YiiAPI
@@ -76,10 +77,12 @@ flowchart TD
     YiiAPI -->|"ActiveRecord"| MySQL
     YiiAPI -->|"Push Jobs"| Redis
     YiiAPI -->|"Send Mail"| SMTP
+    YiiAPI -->|"Error Alerts (TelegramTarget)"| TG
 
     YiiConsole -->|"ActiveRecord"| MySQL
     YiiConsole -->|"Fetch 1C XML"| SFTP
     YiiConsole -->|"Queue Worker"| Redis
+    YiiConsole -->|"Error Alerts (TelegramTarget)"| TG
 
     NodeServer -->|"Subscribe Pub/Sub"| Redis
     NodeServer -->|"Trigger CLI: php yii sftp/product"| YiiConsole
@@ -96,3 +99,13 @@ flowchart TD
 3. **`common\events\AppEvent`**: централизованный слушатель событий ActiveRecord:
    * **`Locations::EVENT_AFTER_INSERT`**: автоматически ставит в очередь задачу `LocationAddedJob` (геокодирование адресов).
    * **`Product::EVENT_AFTER_UPDATE`**: при изменении атрибута `delete` автоматически отправляет в очередь задачу `DeleteProductJob`.
+
+---
+
+## 5. Централизованный алертинг ошибок (TelegramTarget)
+
+Для непрерывного мониторинга надежности backend-сервисов в конфигурациях `api/config/main.php` и `console/config/main.php` зарегистрирован кастомный лог-таргет:
+* **Класс:** [`common\components\TelegramTarget`](file:///C:/Users/Admin/PhpstormProjects/salvi_back/common/components/TelegramTarget.php)
+* **Функция:** перехват сообщений уровня `error` (`Logger::LEVEL_ERROR`) и немедленная отправка форматированного алерта в рабочий Telegram-чат команды разработки.
+* **Изоляция сбоев:** отправка работает через cURL с ограничением таймаута (2с) и изолирована блоком `try/catch`, гарантируя, что проблемы на стороне Telegram API не повлияют на жизненный цикл клиентских запросов.
+* **Подробности механизма:** см. [10. Документация алертинга ошибок в Telegram](../flows/10-error-handling-and-telegram-alerts.md).

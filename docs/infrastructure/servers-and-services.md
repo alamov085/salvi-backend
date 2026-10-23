@@ -19,6 +19,7 @@
 | **SFTP-шлюз (1С / Каталог)** | OpenSSH SFTP | `22321` | Удаленный сервер `94.130.177.104` для обмена прайс-листами 1С |
 | **CI/CD Деплой** | GitHub Actions (`ubuntu-latest`) | SSH `:2321` | Изолированный пользователь `deployer`, скрипт-страж `deploy-guard.sh`, bash-скрипты `deploy.sh` (self-hosted runner выведен из эксплуатации) |
 | **Мониторинг** | Zabbix Agent 2 | `10050` | Мониторинг производительности и доступности сервера |
+| **Алертинг ошибок в TG** | Telegram Bot API | HTTPS (`api.telegram.org`) | Мгновенный алертинг о критических сбоях API и CLI (`common\components\TelegramTarget`) |
 
 ---
 
@@ -209,3 +210,17 @@ bash /var/www/salvi/www_api/deploy.sh
 # Ручной запуск деплоя фронтенда на сервере:
 bash /var/www/salvi/www/deploy.sh
 ```
+
+---
+
+## 7. Мониторинг и алертинг ошибок (Telegram Alerts & Zabbix)
+
+Инфраструктура мониторинга разделена на два контура:
+1. **Инфраструктурный мониторинг (Zabbix Agent 2):** отслеживает загрузку CPU/RAM, свободное место на дисках, состояние демонов systemd (`php-fpm`, `nginx`, `mysqld`, `redis`, `yii-queue@1`) и сетевую доступность портов.
+2. **Алертинг уровня приложения (Telegram Bot API):**
+   * **Компонент:** [`common\components\TelegramTarget`](file:///C:/Users/Admin/PhpstormProjects/salvi_back/common/components/TelegramTarget.php).
+   * **Каналы перехвата:** зарегистрирован в `api/config/main.php` (для REST API) и `console/config/main.php` (для фоновых задач и очередей).
+   * **Условия срабатывания:** уровень `error` (`Logger::LEVEL_ERROR = 1`). Ожидаемые HTTP-ошибки (`401`, `403`, `404`) отфильтрованы через массив `$except`.
+   * **Содержимое алерта:** статус окружения (`🔴 [PRODUCTION]` / `🟡 [STAGE]`), время, категория ошибки, URL запроса, IP клиента, User ID, тип исключения, файл, строка и код ошибки.
+   * **Отказоустойчивость:** cURL-запрос к API Telegram ограничен жестким таймаутом (2 сек) и защищен блоком `try/catch`. Сетевые сбои сервиса Telegram полностью изолированы и не нарушают работу основного приложения.
+   * **Подробное описание работы:** см. [Руководство по механизму алертинга ошибок в Telegram](../flows/10-error-handling-and-telegram-alerts.md).

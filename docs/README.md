@@ -57,6 +57,10 @@
   * Управление промо-слайдером (`BannerController.php` и `category-main.vue`)
   * Динамический таймер показа (`time_swap`), порядок сортировки (`sort`) и ссылки (`url`)
   * Предзагрузка картинок (`preloadBanner`) и тегированное кэширование в Redis (`GetBanners`)
+* **[10. Алертинг и мониторинг ошибок в Telegram](flows/10-error-handling-and-telegram-alerts.md)**
+  * Логирование критических ошибок API и консольных команд (`common\components\TelegramTarget`)
+  * Мгновенная доставка алертов с контекстом (URL, метод, IP, User ID, трейс) в Telegram-канал
+  * Фильтрация исключений (401, 403, 404), защита от лимитов и изоляция от сбоев сети (Fail-safe)
 
 ---
 
