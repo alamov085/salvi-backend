@@ -30,6 +30,9 @@ composer.phar
 # Mac DS_Store Files
 .DS_Store
 
+# local config files (secrets)
+*-local.php
+
 # phpunit itself is not needed
 phpunit.phar
 # local phpunit config

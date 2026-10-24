@@ -6,7 +6,7 @@ $params = array_merge(
     require __DIR__ . '/params-local.php'
 );
 
-return [
+$config = [
     'id' => 'app-console',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log'],
@@ -38,3 +38,10 @@ return [
     ],
     'params' => $params,
 ];
+
+$config = \yii\helpers\ArrayHelper::merge(
+    require __DIR__ . '/../../common/config/main-local.php',
+    $config
+);
+
+return $config;

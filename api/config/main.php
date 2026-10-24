@@ -100,4 +100,9 @@ if (class_exists('yii\debug\Module')) {
     ];
 }
 
+$config = \yii\helpers\ArrayHelper::merge(
+    require __DIR__ . '/../../common/config/main-local.php',
+    $config
+);
+
 return $config;

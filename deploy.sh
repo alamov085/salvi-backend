@@ -83,10 +83,10 @@ fi
 BACKUP_SIZE=$(du -h "$BACKUP_FILE" 2>/dev/null | cut -f1)
 log "Бэкап сохранен ($COMPRESSOR, размер: ${BACKUP_SIZE:-0}): $BACKUP_FILE"
 
-# Удаляем старые бэкапы бэкенда, оставляя только свежесозданный
+# Удаляем старые бэкапы бэкенда, оставляя 2 последних
 if [ -s "$BACKUP_FILE" ]; then
-    log "Удаляем старые бэкапы salvi_api, оставляя только текущий..."
-    find "$BACKUP_DIR" -maxdepth 1 -type f -name "salvi_api_*.tar.gz" ! -name "$(basename "$BACKUP_FILE")" -exec rm -f {} + 2>/dev/null || true
+    log "Удаляем старые бэкапы salvi_api, оставляя 2 последних..."
+    ls -t "$BACKUP_DIR"/salvi_api_*.tar.gz 2>/dev/null | tail -n +3 | xargs rm -f 2>/dev/null || true
 fi
 
 # 2. Подтягиваем свежий код из Git
