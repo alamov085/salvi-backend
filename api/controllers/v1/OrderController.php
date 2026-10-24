@@ -474,20 +474,27 @@ class OrderController extends RestController
         if (Yii::$app->user->can('updateOrder')) {
             $model = new OrderForm();
             if ($model->load(Yii::$app->getRequest()->getBodyParams(), '') && $model->validate()) {
-                Yii::error($model->errors);
                 $result = $model->update();
                 if ($result) {
                     return $this->successResponse(['id' => $result]);
                 }
+
+                // Заказ не удалось обновить в БД — это реальная ошибка сервера
+                Yii::error([
+                    'message' => 'Ошибка сохранения при обновлении заказа',
+                    'order_id' => $model->id,
+                    'errors' => $model->getErrors(),
+                ]);
+                return $this->failResponse(['message' => 'Не вдалося оновити замовлення']);
             }
-            $model->validate();
-            return $model;
+
+            return $model; // вернет 422 с ошибками валидации клиенту
         } else {
             return $this->accessDenied();
         }
     }
-	
-	public function actionCancel()
+
+    public function actionCancel()
 	{
 		if (Yii::$app->user->can('updateOrder'))
 		{

@@ -65,6 +65,11 @@ class TelegramTarget extends Target
                 continue;
             }
 
+            // Не отправлять в Telegram пустые ошибки (например, случайный вызов Yii::error([]))
+            if (empty($message[0]) && !is_numeric($message[0])) {
+                continue;
+            }
+
             $text = $this->formatMessageForTelegram($message);
             $this->sendMessage($text);
         }
